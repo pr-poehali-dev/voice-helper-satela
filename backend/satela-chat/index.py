@@ -57,7 +57,7 @@ def handler(event: dict, context) -> dict:
         
         client = OpenAI(
             api_key=api_key,
-            base_url='https://api.routerai.com/v1'
+            base_url='https://routerai.ru/api/v1'
         )
         
         messages = [
