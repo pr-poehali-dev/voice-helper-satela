@@ -1,9 +1,9 @@
 import json
 import os
-from openai import OpenAI
+from anthropic import Anthropic
 
 def handler(event: dict, context) -> dict:
-    '''API для интеллектуального диалога с голосовым помощником Сатела через OpenAI GPT-4o-mini'''
+    '''API для интеллектуального диалога с голосовым помощником Сатела через Anthropic Claude'''
     
     method = event.get('httpMethod', 'POST')
     
@@ -44,7 +44,7 @@ def handler(event: dict, context) -> dict:
                 'body': json.dumps({'error': 'Message is required'})
             }
         
-        api_key = os.environ.get('OPENAI_API_KEY')
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
         if not api_key:
             return {
                 'statusCode': 500,
@@ -52,15 +52,12 @@ def handler(event: dict, context) -> dict:
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*'
                 },
-                'body': json.dumps({'error': 'OpenAI API key not configured'})
+                'body': json.dumps({'error': 'Anthropic API key not configured'})
             }
         
-        client = OpenAI(api_key=api_key)
+        client = Anthropic(api_key=api_key)
         
-        messages = [
-            {
-                'role': 'system',
-                'content': '''Ты Сатела - интеллектуальный голосовой помощник с личностью доброй, элегантной девушки с белыми волосами.
+        system_prompt = '''Ты Сатела - интеллектуальный голосовой помощник с личностью доброй, элегантной девушки с белыми волосами.
 
 Твоя роль:
 - Помогаешь пользователю с командами на компьютере
@@ -73,10 +70,9 @@ def handler(event: dict, context) -> dict:
 Стиль общения:
 - Вежливая, умная, с чувством юмора
 - Не используешь эмодзи
-- Говоришь на "ты" с пользователем
-'''
-            }
-        ]
+- Говоришь на "ты" с пользователем'''
+        
+        messages = []
         
         for msg in conversation_history[-10:]:
             messages.append({
@@ -89,14 +85,14 @@ def handler(event: dict, context) -> dict:
             'content': user_message
         })
         
-        response = client.chat.completions.create(
-            model='gpt-4o-mini',
-            messages=messages,
-            max_tokens=150,
-            temperature=0.8
+        response = client.messages.create(
+            model='claude-3-5-haiku-20241022',
+            max_tokens=200,
+            system=system_prompt,
+            messages=messages
         )
         
-        assistant_message = response.choices[0].message.content
+        assistant_message = response.content[0].text
         
         return {
             'statusCode': 200,
@@ -106,7 +102,7 @@ def handler(event: dict, context) -> dict:
             },
             'body': json.dumps({
                 'response': assistant_message,
-                'model': 'gpt-4o-mini'
+                'model': 'claude-3-5-haiku'
             })
         }
         
