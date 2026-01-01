@@ -166,12 +166,12 @@ const Index = () => {
                 </Badge>
               </div>
 
-              <div className="relative h-[400px] flex items-center justify-center">
+              <div className="relative h-[400px] flex items-center justify-center bg-gradient-to-b from-transparent via-primary/5 to-transparent rounded-lg">
                 <div className={`transition-all duration-500 ${isSpeaking ? 'animate-breathe' : 'animate-float'}`}>
                   <img
-                    src="https://cdn.poehali.dev/projects/a53d79dd-729d-429f-a6b7-3bee94ffdb20/files/c090bc13-b819-4fd8-b9d9-5bcd3b47be55.jpg"
+                    src="https://cdn.poehali.dev/projects/a53d79dd-729d-429f-a6b7-3bee94ffdb20/files/f19e22fd-4e95-4d4d-b758-7e235ee979b4.jpg"
                     alt="Сатела"
-                    className="w-64 h-auto object-contain rounded-lg"
+                    className="w-64 h-auto object-contain drop-shadow-2xl"
                   />
                 </div>
               </div>
