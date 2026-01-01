@@ -74,30 +74,58 @@ const Index = () => {
     }
   };
 
-  const handleVoiceCommand = (command: string) => {
+  const handleVoiceCommand = async (command: string) => {
     setIsProcessing(true);
     setCurrentPose('thinking');
 
     const lowerCommand = command.toLowerCase();
     let response = '';
+    let shouldUseAI = true;
 
     if (lowerCommand.includes('браузер')) {
       response = 'Открываю браузер для вас';
       setTimeout(() => window.open('https://google.com', '_blank'), 1000);
+      shouldUseAI = false;
     } else if (lowerCommand.includes('время') || lowerCommand.includes('который час')) {
       const now = new Date();
       response = `Сейчас ${now.toLocaleTimeString('ru-RU')}`;
+      shouldUseAI = false;
     } else if (lowerCommand.includes('дата')) {
       const now = new Date();
       response = `Сегодня ${now.toLocaleDateString('ru-RU')}`;
-    } else if (lowerCommand.includes('привет') || lowerCommand.includes('здравствуй')) {
-      response = 'Привет! Я Сатела, ваш голосовой помощник. Чем могу помочь?';
-      setCurrentPose('waving');
-    } else if (lowerCommand.includes('спасибо')) {
-      response = 'Всегда рада помочь!';
-      setCurrentPose('waving');
-    } else {
-      response = 'Я вас услышала. Пока я учусь понимать эту команду';
+      shouldUseAI = false;
+    }
+
+    if (shouldUseAI) {
+      try {
+        const apiResponse = await fetch('https://functions.poehali.dev/560d1b60-4538-4a47-a1a9-41c9b31d7427', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: command,
+            history: conversation
+          })
+        });
+
+        const data = await apiResponse.json();
+        
+        if (data.response) {
+          response = data.response;
+          
+          if (lowerCommand.includes('привет') || lowerCommand.includes('здравствуй')) {
+            setCurrentPose('waving');
+          } else if (lowerCommand.includes('спасибо')) {
+            setCurrentPose('waving');
+          }
+        } else {
+          response = data.error || 'Извините, произошла ошибка';
+        }
+      } catch (error) {
+        console.error('AI Error:', error);
+        response = 'Не могу подключиться к нейросети. Проверьте настройки.';
+      }
     }
 
     setConversation(prev => [
@@ -110,7 +138,7 @@ const Index = () => {
     setTimeout(() => {
       setIsProcessing(false);
       setCurrentPose('standing');
-    }, 2000);
+    }, 1000);
   };
 
   const speak = (text: string) => {

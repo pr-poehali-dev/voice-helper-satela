@@ -1,0 +1,42 @@
+{
+  "tests": [
+    {
+      "name": "Test chat with valid message",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "message": "Привет, Сатела!",
+        "history": []
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "response": "string",
+        "model": "gpt-4o-mini"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test chat with history",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "message": "Который час?",
+        "history": [
+          {
+            "role": "user",
+            "text": "Привет"
+          },
+          {
+            "role": "satela",
+            "text": "Здравствуй!"
+          }
+        ]
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "response": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
