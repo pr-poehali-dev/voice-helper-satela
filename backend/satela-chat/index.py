@@ -1,9 +1,9 @@
 import json
 import os
-from openai import OpenAI
+import requests
 
 def handler(event: dict, context) -> dict:
-    '''API для интеллектуального диалога с голосовым помощником Сатела через RouterAI'''
+    '''API для интеллектуального диалога с голосовым помощником Сатела через Hugging Face'''
     
     method = event.get('httpMethod', 'POST')
     
@@ -44,7 +44,7 @@ def handler(event: dict, context) -> dict:
                 'body': json.dumps({'error': 'Message is required'})
             }
         
-        api_key = os.environ.get('ROUTERAI_API_KEY')
+        api_key = os.environ.get('HUGGINGFACE_API_KEY')
         if not api_key:
             return {
                 'statusCode': 500,
@@ -52,18 +52,10 @@ def handler(event: dict, context) -> dict:
                     'Content-Type': 'application/json',
                     'Access-Control-Allow-Origin': '*'
                 },
-                'body': json.dumps({'error': 'RouterAI API key not configured'})
+                'body': json.dumps({'error': 'Hugging Face API key not configured'})
             }
         
-        client = OpenAI(
-            api_key=api_key,
-            base_url='https://routerai.ru/api/v1'
-        )
-        
-        messages = [
-            {
-                'role': 'system',
-                'content': '''Ты Сатела - интеллектуальный голосовой помощник с личностью доброй, элегантной девушки с белыми волосами.
+        system_prompt = '''Ты Сатела - интеллектуальный голосовой помощник с личностью доброй, элегантной девушки с белыми волосами.
 
 Твоя роль:
 - Помогаешь пользователю с командами на компьютере
@@ -77,28 +69,55 @@ def handler(event: dict, context) -> dict:
 - Вежливая, умная, с чувством юмора
 - Не используешь эмодзи
 - Говоришь на "ты" с пользователем'''
+        
+        conversation_text = system_prompt + "\n\n"
+        
+        for msg in conversation_history[-6:]:
+            role = "Пользователь" if msg.get('role') == 'user' else "Сатела"
+            conversation_text += f"{role}: {msg.get('text', '')}\n"
+        
+        conversation_text += f"Пользователь: {user_message}\nСатела:"
+        
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
+            'inputs': conversation_text,
+            'parameters': {
+                'max_new_tokens': 150,
+                'temperature': 0.7,
+                'top_p': 0.9,
+                'return_full_text': False
             }
-        ]
+        }
         
-        for msg in conversation_history[-10:]:
-            messages.append({
-                'role': 'user' if msg.get('role') == 'user' else 'assistant',
-                'content': msg.get('text', '')
-            })
-        
-        messages.append({
-            'role': 'user',
-            'content': user_message
-        })
-        
-        response = client.chat.completions.create(
-            model='gpt-4o-mini',
-            messages=messages,
-            max_tokens=200,
-            temperature=0.8
+        response = requests.post(
+            'https://api-inference.huggingface.co/models/google/gemma-2-2b-it',
+            headers=headers,
+            json=payload,
+            timeout=30
         )
         
-        assistant_message = response.choices[0].message.content
+        if response.status_code != 200:
+            return {
+                'statusCode': 500,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'body': json.dumps({'error': f'Hugging Face error: {response.text}'})
+            }
+        
+        result = response.json()
+        
+        if isinstance(result, list) and len(result) > 0:
+            assistant_message = result[0].get('generated_text', '').strip()
+        elif isinstance(result, dict):
+            assistant_message = result.get('generated_text', '').strip()
+        else:
+            assistant_message = 'Извините, не могу обработать ответ'
         
         return {
             'statusCode': 200,
@@ -108,7 +127,7 @@ def handler(event: dict, context) -> dict:
             },
             'body': json.dumps({
                 'response': assistant_message,
-                'model': 'gpt-4o-mini-via-routerai'
+                'model': 'google/gemma-2-2b-it'
             })
         }
         
